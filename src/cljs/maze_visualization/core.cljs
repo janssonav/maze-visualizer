@@ -1,16 +1,41 @@
 (ns maze-visualization.core
-    (:require [reagent.core :as reagent :refer [atom]]
+    (:require [maze-visualization.solver :as solver]
+              [reagent.core :as reagent :refer [atom]]
               [reagent.session :as session]
               [secretary.core :as secretary :include-macros true]
               [accountant.core :as accountant]))
 
-(def testmaze [[1  :S 1  1  1  1  1]
-               [1  0  0  0  0  0  1]
-               [1  1  1  1  1  0  1]
-               [1  0  0  0  0  0  1]
-               [1  0  1  1  1  0  1]
-               [1  0  0  0  1  0  1]
-               [1  1  1  :E 1  1  1]])
+(def testmaze [[1  :S 1  1  1  1  1  1  1]
+               [1  0  0  0  0  0  0  0  1]
+               [1  1  1  1  0  1  1  0  1]
+               [1  0  0  0  0  0  1  0  1]
+               [1  0  1  1  1  0  1  0  1]
+               [1  0  1  0  0  0  1  0  1]
+               [1  0  1  1  1  1  1  0  1]
+               [1  0  0  0  1  0  0  0  1]
+               [1  0  1  0  1  0  1  1  1]
+               [1  0  1  0  1  0  0  0  1]
+               [1  1  1  :E 1  1  1  1  1]])
+
+(def solution (solver/solve-maze testmaze))
+
+(def initial-state 
+  {:maze testmaze
+   :solved false})
+
+(defonce app-state
+  (atom initial-state))
+
+(defn solve [state]
+  (-> state
+      (update :maze solver/solve-maze)
+      (assoc :solved true)))
+
+(defn set-solved-state! []
+  (swap! app-state solve))
+
+(defn reset-state! []
+  (reset! app-state initial-state))
 
 (defn cross [color i j]
   [:g {:stroke color 
@@ -19,8 +44,8 @@
        :transform
        (str "translate(" (+ 0.5 i) "," (+ 0.5 j) ") "
             "scale(0.3)")}
-   [:line {:x1 -1 :y1 -1 :x2 1 :y2 1}]
-   [:line {:x1 1 :y1 -1 :x2 -1 :y2 1}]])
+   [:line {:x1 -1 :y1 -1 :x2  1 :y2 1}]
+   [:line {:x1  1 :y1 -1 :x2 -1 :y2 1}]])
 
 (defn rect [color i j]
   [:rect {:fill color
@@ -35,16 +60,17 @@
             :cy (+ 0.5 j)
             :r 0.4}])
 
-(def start-component   (partial cross  "darkred"))
-(def end-component     (partial cross  "green"))
-(def wall-component    (partial rect   "blue"))
-(def floor-component   (partial rect   "white"))
-(def visited-component (partial circle "blue"))
+(def draw-fn {1  (partial rect   "blue")
+              0  (partial rect   "white")
+              :x (partial circle "green")
+              :S (partial cross  "darkred")
+              :E (partial cross  "green")})
 
-;; Draws the maze
-(defn maze-component [maze]
+(defn maze-component 
+  "Draws the given maze"
+  [maze]
   (let [tiles-y (count maze)
-        tiles-x  (count (first maze))]
+        tiles-x (count (first maze))]
     (into
       [:svg
        {:view-box (str "0 0 " tiles-x " " tiles-y)
@@ -52,43 +78,30 @@
         :height 500}]
       (for [i (range tiles-x)
             j (range tiles-y)]
-            (case (get-in maze [j i])
-              :S [start-component   i j]
-              :E [end-component     i j]
-              1  [wall-component    i j]
-              0  [floor-component   i j]
-              :x [visited-component i j])))))
+        [(draw-fn (get-in maze [j i])) i j]))))
 
 ;; -------------------------
 ;; Views
 
+(defn action-button []
+  (if (:solved @app-state)
+    [:button {:on-click reset-state!} "RESET"]
+    [:button {:on-click set-solved-state!} "SOLVE"]))
 
-(defn home-page-1 []
-  [:div [:h2 "Kikkelis kokkeli"]
-   [:div [:a {:href "/about"} "go to about page"]]])
-
-;;(defn about-page []
-;;  [:div [:h2 "About maze-visualization"]
-;;   [:div [:a {:href "/"} "go to the home page"]]])
-
-(defn home-page-2 []
+(defn home-page []
   [:div
-   [:h2 "Sokkelo"]
-   (maze-component testmaze)])
+   [:div (action-button)]
+   (maze-component (:maze @app-state))])
+
 
 (defn current-page []
   [:div [(session/get :current-page)]])
-
-(def home-page home-page-2)
 
 ;; -------------------------
 ;; Routes
 
 (secretary/defroute "/" []
   (session/put! :current-page #'home-page))
-
-;;(secretary/defroute "/about" []
-;;  (session/put! :current-page #'about-page))
 
 ;; -------------------------
 ;; Initialize app
