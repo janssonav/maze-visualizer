@@ -47,12 +47,13 @@
    [:line {:x1 -1 :y1 -1 :x2  1 :y2 1}]
    [:line {:x1  1 :y1 -1 :x2 -1 :y2 1}]])
 
-(defn rect [color i j]
+(defn rect [color i j on-click]
   [:rect {:fill color
           :x i
           :y j
           :width 1
-          :height 1}])
+          :height 1
+          :on-click on-click}])
 
 (defn circle [color i j]
   [:circle {:fill color
@@ -60,8 +61,17 @@
             :cy (+ 0.5 j)
             :r 0.4}])
 
-(def draw-fn {1  (partial rect   "blue")
-              0  (partial rect   "white")
+(defn set-tile! [i j tile]
+  (swap! app-state assoc-in [:maze j i] tile))
+
+(defn wall [i j]
+  (rect "blue" i j #(set-tile! i j 0)))
+
+(defn floor [i j]
+  (rect "white " i j #(set-tile! i j 1)))
+
+(def draw-fn {1  wall
+              0  floor
               :x (partial circle "green")
               :S (partial cross  "darkred")
               :E (partial cross  "green")})
