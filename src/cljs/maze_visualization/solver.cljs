@@ -40,9 +40,12 @@
    :solved false})
 
 (defn solve-maze [maze]
-  (loop [maze-states [(init-maze maze)]]
-    (let [solved-state (some #(when (:solved %) %) maze-states)]
-      (if solved-state
-        (:maze solved-state)
-        (recur (mapcat next-possible-steps maze-states))))))
+  (loop [maze-states [(init-maze maze)]
+         loop-count 0]
+    (if (empty? maze-states)
+      nil
+      (let [solved-state (some #(when (:solved %) %) maze-states)]
+        (if solved-state
+          (:maze solved-state)
+          (recur (mapcat next-possible-steps maze-states) (inc loop-count)))))))
 

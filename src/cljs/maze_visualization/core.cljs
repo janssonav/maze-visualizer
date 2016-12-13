@@ -14,10 +14,8 @@
                [1  0  1  1  1  1  1  0  1]
                [1  0  0  0  1  0  0  0  1]
                [1  0  1  0  1  0  1  1  1]
-               [1  0  1  0  1  0  0  0  1]
+               [1  0  1  0  0  0  0  0  1]
                [1  1  1  :E 1  1  1  1  1]])
-
-(def solution (solver/solve-maze testmaze))
 
 (def initial-state 
   {:maze testmaze
@@ -27,9 +25,11 @@
   (atom initial-state))
 
 (defn solve [state]
-  (-> state
-      (update :maze solver/solve-maze)
-      (assoc :solved true)))
+  (let [solved (solver/solve-maze (:maze state))]
+    (if (nil? solved)
+      state
+      {:maze solved
+       :solved true})))
 
 (defn set-solved-state! []
   (swap! app-state solve))
@@ -74,8 +74,8 @@
     (into
       [:svg
        {:view-box (str "0 0 " tiles-x " " tiles-y)
-        :width 500
-        :height 500}]
+        :width 700
+        :height 700}]
       (for [i (range tiles-x)
             j (range tiles-y)]
         [(draw-fn (get-in maze [j i])) i j]))))
